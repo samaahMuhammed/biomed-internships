@@ -18,14 +18,16 @@ input{flex:1;min-width:200px}
 <div class="bar"><input id="q" placeholder="Search title, company, city…"><select id="src"><option value="">All sources</option></select><select id="dis"><option value="">All majors</option></select></div>
 <div id="list"></div>
 </main><script>
-let D=[];const $=i=>document.getElementById(i);
+let D=[];
+const fmt=u=>{const t=new Date(u.replace(" UTC","Z").replace(" ","T"));if(isNaN(t))return u;
+ return t.toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"});};const $=i=>document.getElementById(i);
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function render(){const q=$("q").value.toLowerCase(),s=$("src").value,m=$("dis").value;
  const r=D.filter(j=>(!s||j.source===s)&&(!m||(j.disciplines||[]).includes(m))&&(`${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q)));
  $("list").innerHTML=r.map(j=>`<div class="job"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a><span class="tag">${esc(j.source)}</span>${(j.disciplines||[]).map(d=>`<span class="tag">${esc(d)}</span>`).join("")}
  <div class="meta">${esc(j.company)} · ${esc(j.location)} · posted ${esc(j.posted)}${j.deadline?` · closes ${esc(j.deadline)}`:""}</div></div>`).join("")||"<p>No matches.</p>";}
-fetch("internships.json").then(r=>r.json()).then(d=>{D=d.jobs;
- $("sub").textContent=`${d.count} internships · updated ${d.updated} (refreshed daily)`;
+fetch("internships.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(d=>{D=d.jobs;
+ $("sub").textContent=`${d.count} internships · updated ${fmt(d.updated)} (refreshed daily)`;
  [...new Set(D.map(j=>j.source))].forEach(x=>$("src").add(new Option(x,x)));[...new Set(D.flatMap(j=>j.disciplines||[]))].sort().forEach(x=>$("dis").add(new Option(x,x)));render();})
  .catch(()=>$("sub").textContent="Could not load internships.json");
 $("q").oninput=render;$("src").onchange=render;$("dis").onchange=render;
