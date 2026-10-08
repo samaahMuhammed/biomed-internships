@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biomedical Engineering Internships</title>
+<style>
+:root{--bg:#f7f9fb;--fg:#12202e;--card:#fff;--mut:#5d6b7a;--ac:#0b7a75;--bd:#dde4ea}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1620;--fg:#e8eef4;--card:#16222f;--mut:#9aa9b8;--ac:#3fc1b9;--bd:#26364a}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px}
+h1{margin:0 0 4px}.sub{color:var(--mut);margin:0 0 16px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+input,select{padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);font:inherit}
+input{flex:1;min-width:200px}
+.job{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.job a{color:var(--ac);font-weight:600;text-decoration:none;font-size:1.05em}
+.meta{color:var(--mut);font-size:.9em}.tag{background:var(--bd);border-radius:99px;padding:1px 8px;font-size:.8em;margin-left:6px}
+</style></head><body><main>
+<h1>Biomedical Engineering Internships</h1>
+<p class="sub" id="sub">Loading…</p>
+<div class="bar"><input id="q" placeholder="Search title, company, city…"><select id="src"><option value="">All sources</option></select></div>
+<div id="list"></div>
+</main><script>
+let D=[];const $=i=>document.getElementById(i);
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function render(){const q=$("q").value.toLowerCase(),s=$("src").value;
+ const r=D.filter(j=>(!s||j.source===s)&&(`${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q)));
+ $("list").innerHTML=r.map(j=>`<div class="job"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a><span class="tag">${esc(j.source)}</span>
+ <div class="meta">${esc(j.company)} · ${esc(j.location)} · posted ${esc(j.posted)}${j.deadline?` · closes ${esc(j.deadline)}`:""}</div></div>`).join("")||"<p>No matches.</p>";}
+fetch("internships.json").then(r=>r.json()).then(d=>{D=d.jobs;
+ $("sub").textContent=`${d.count} internships · updated ${d.updated} (refreshed daily)`;
+ [...new Set(D.map(j=>j.source))].forEach(x=>$("src").add(new Option(x,x)));render();})
+ .catch(()=>$("sub").textContent="Could not load internships.json");
+$("q").oninput=render;$("src").onchange=render;
+</script></body></html>
