@@ -14,9 +14,11 @@ DOMAINS = ["medical device", "biomedical", "healthcare", "health tech", "digital
 FIELDS = ["software engineer", "mechanical engineer", "chemical engineer", "electrical engineer",
           "neuroengineer", "immunology", "materials engineer", "data science", "machine learning",
           "bioinformatics", "process engineer", "quality engineer", "regulatory", "research"]
-QUERIES = [f"{f} intern {d}" for f in FIELDS[:8] for d in ("medical device", "biotech", "healthcare")] + \
-          ["biomedical engineering intern", "bioengineering intern", "neuroscience engineering intern",
-           "immunology research intern", "bioprocess engineering intern", "bioinformatics intern"]
+QUERIES = ["biomedical engineering intern", "bioengineering intern", "medical device engineering intern",
+           "software engineering intern healthcare", "software intern medical device", "mechanical engineering intern medical device",
+           "chemical engineering intern biotech", "process engineering intern pharmaceutical", "electrical engineering intern medical device",
+           "neuroscience engineering intern", "immunology research intern", "bioinformatics intern",
+           "data science intern healthcare", "biotech research intern", "quality engineering intern medical device"]
 KEEP = re.compile(r"intern|co-?op|student|trainee|apprentice|pathways", re.I)
 TOPIC = re.compile("|".join(DOMAINS), re.I)
 EXCLUDE = re.compile(r"pharmacy|pharmacist|retail|cashier|store |nurs(e|ing)|dental|sales|marketing|"
@@ -41,6 +43,16 @@ def get(url, headers=None):
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 
+import time
+def try_get(url, headers=None, tries=3):
+    for i in range(tries):
+        try:
+            return get(url, headers)
+        except Exception as e:
+            print(f"   request failed ({e}); retry {i+1}")
+            time.sleep(5 * (i + 1))
+    return {}
+
 def safe(fn):
     try: return fn()
     except Exception as e:
@@ -53,7 +65,8 @@ def adzuna():
     for q in QUERIES:
         u = ("https://api.adzuna.com/v1/api/jobs/us/search/1?" + urllib.parse.urlencode(
             {"app_id": i, "app_key": k, "what": q, "results_per_page": 50, "max_days_old": 45}))
-        for j in get(u).get("results", []):
+        time.sleep(3)
+        for j in try_get(u).get("results", []):
             out.append(dict(title=j["title"], company=j.get("company", {}).get("display_name", ""),
                 location=j.get("location", {}).get("display_name", ""), url=j["redirect_url"],
                 posted=j.get("created", "")[:10], source="Adzuna", text=j.get("description", "")))
@@ -65,8 +78,8 @@ def usajobs():
     out = []
     for q in ["biomedical engineer student", "software engineer student health", "mechanical engineer student medical", "chemical engineer student", "neuroscience student", "immunology student", "bioengineer pathways"]:
         u = "https://data.usajobs.gov/api/search?" + urllib.parse.urlencode({"Keyword": q, "ResultsPerPage": 50})
-        d = get(u, {"Host": "data.usajobs.gov", "User-Agent": e, "Authorization-Key": k})
-        for it in d["SearchResult"]["SearchResultItems"]:
+        d = try_get(u, {"Host": "data.usajobs.gov", "User-Agent": e, "Authorization-Key": k})
+        for it in d.get("SearchResult", {}).get("SearchResultItems", []):
             m = it["MatchedObjectDescriptor"]
             out.append(dict(title=m["PositionTitle"], company=m["OrganizationName"],
                 location=m["PositionLocationDisplay"], url=m["PositionURI"],
@@ -79,7 +92,7 @@ def muse():
     for p in range(0, 5):
         u = "https://www.themuse.com/api/public/jobs?" + urllib.parse.urlencode(
             [("category", "Science and Engineering"), ("category", "Software Engineering"), ("category", "Data Science"), ("category", "Healthcare"), ("level", "Internship"), ("page", p)])
-        for j in get(u).get("results", []):
+        for j in try_get(u).get("results", []):
             out.append(dict(title=j["name"], company=j["company"]["name"],
                 location=", ".join(l["name"] for l in j.get("locations", [])),
                 url=j["refs"]["landing_page"], posted=j["publication_date"][:10],
