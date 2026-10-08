@@ -63,13 +63,14 @@ def adzuna():
     if not (i and k): return []
     out = []
     for q in QUERIES:
-        u = ("https://api.adzuna.com/v1/api/jobs/us/search/1?" + urllib.parse.urlencode(
-            {"app_id": i, "app_key": k, "what": q, "results_per_page": 50, "max_days_old": 45}))
-        time.sleep(3)
-        for j in try_get(u).get("results", []):
-            out.append(dict(title=j["title"], company=j.get("company", {}).get("display_name", ""),
-                location=j.get("location", {}).get("display_name", ""), url=j["redirect_url"],
-                posted=j.get("created", "")[:10], source="Adzuna", text=j.get("description", "")))
+      for page in (1, 2):
+          u = (f"https://api.adzuna.com/v1/api/jobs/us/search/{page}?" + urllib.parse.urlencode(
+              {"app_id": i, "app_key": k, "what": q, "results_per_page": 50, "max_days_old": 45}))
+          time.sleep(3)
+          for j in try_get(u).get("results", []):
+              out.append(dict(title=j["title"], company=j.get("company", {}).get("display_name", ""),
+                  location=j.get("location", {}).get("display_name", ""), url=j["redirect_url"],
+                  posted=j.get("created", "")[:10], source="Adzuna", text=j.get("description", "")))
     return out
 
 def usajobs():
@@ -107,9 +108,39 @@ def greenhouse():
                 url=j["absolute_url"], posted=j.get("updated_at", "")[:10], source="Greenhouse", text=j["title"]))
     return out
 
+def jooble():
+    k = os.getenv("JOOBLE_KEY")
+    if not k: return []
+    out = []
+    for q in QUERIES[:10]:
+        body = json.dumps({"keywords": q, "location": "United States", "page": 1}).encode()
+        req = urllib.request.Request(f"https://jooble.org/api/{k}", data=body,
+              headers={"Content-Type": "application/json", "User-Agent": "biomed-interns/1.0"})
+        try:
+            d = json.load(urllib.request.urlopen(req, timeout=30))
+        except Exception as e:
+            print(f"   jooble failed ({e})"); continue
+        time.sleep(2)
+        for j in d.get("jobs", []):
+            out.append(dict(title=re.sub("<[^>]+>", "", j.get("title", "")), company=j.get("company", ""),
+                location=j.get("location", ""), url=j["link"], posted=(j.get("updated") or "")[:10],
+                source="Jooble", text=re.sub("<[^>]+>", " ", j.get("snippet", ""))))
+    return out
+
+def lever():
+    out = []
+    for c in filter(None, os.getenv("LEVER_COMPANIES", "").split(",")):
+        for j in try_get(f"https://api.lever.co/v0/postings/{c.strip()}?mode=json") or []:
+            ts = j.get("createdAt")
+            out.append(dict(title=j["text"], company=c.strip().title(),
+                location=j.get("categories", {}).get("location", ""), url=j["hostedUrl"],
+                posted=datetime.datetime.fromtimestamp(ts/1000).strftime("%Y-%m-%d") if ts else "",
+                source="Lever", text=j["text"] + " " + j.get("descriptionPlain", "")[:1500]))
+    return out
+
 def main():
     jobs = []
-    for f in (adzuna, usajobs, muse, greenhouse):
+    for f in (adzuna, jooble, usajobs, muse, greenhouse, lever):
         got = safe(f); print(f"{f.__name__}: {len(got)} raw results"); jobs += got
     cutoff = (datetime.date.today() - datetime.timedelta(days=MAX_AGE_DAYS)).isoformat()
     seen, final = set(), []
