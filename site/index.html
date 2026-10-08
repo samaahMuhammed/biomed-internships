@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Biomedical Engineering Internships</title>
+<title>Bio &amp; Medtech Internships</title>
 <style>
 :root{--bg:#f7f9fb;--fg:#12202e;--card:#fff;--mut:#5d6b7a;--ac:#0b7a75;--bd:#dde4ea}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1620;--fg:#e8eef4;--card:#16222f;--mut:#9aa9b8;--ac:#3fc1b9;--bd:#26364a}}
@@ -13,20 +13,20 @@ input{flex:1;min-width:200px}
 .job a{color:var(--ac);font-weight:600;text-decoration:none;font-size:1.05em}
 .meta{color:var(--mut);font-size:.9em}.tag{background:var(--bd);border-radius:99px;padding:1px 8px;font-size:.8em;margin-left:6px}
 </style></head><body><main>
-<h1>Biomedical Engineering Internships</h1>
+<h1>Engineering &amp; Science Internships in Biomed</h1>
 <p class="sub" id="sub">Loading…</p>
-<div class="bar"><input id="q" placeholder="Search title, company, city…"><select id="src"><option value="">All sources</option></select></div>
+<div class="bar"><input id="q" placeholder="Search title, company, city…"><select id="src"><option value="">All sources</option></select><select id="dis"><option value="">All majors</option></select></div>
 <div id="list"></div>
 </main><script>
 let D=[];const $=i=>document.getElementById(i);
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function render(){const q=$("q").value.toLowerCase(),s=$("src").value;
- const r=D.filter(j=>(!s||j.source===s)&&(`${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q)));
- $("list").innerHTML=r.map(j=>`<div class="job"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a><span class="tag">${esc(j.source)}</span>
+function render(){const q=$("q").value.toLowerCase(),s=$("src").value,m=$("dis").value;
+ const r=D.filter(j=>(!s||j.source===s)&&(!m||(j.disciplines||[]).includes(m))&&(`${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q)));
+ $("list").innerHTML=r.map(j=>`<div class="job"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a><span class="tag">${esc(j.source)}</span>${(j.disciplines||[]).map(d=>`<span class="tag">${esc(d)}</span>`).join("")}
  <div class="meta">${esc(j.company)} · ${esc(j.location)} · posted ${esc(j.posted)}${j.deadline?` · closes ${esc(j.deadline)}`:""}</div></div>`).join("")||"<p>No matches.</p>";}
 fetch("internships.json").then(r=>r.json()).then(d=>{D=d.jobs;
  $("sub").textContent=`${d.count} internships · updated ${d.updated} (refreshed daily)`;
- [...new Set(D.map(j=>j.source))].forEach(x=>$("src").add(new Option(x,x)));render();})
+ [...new Set(D.map(j=>j.source))].forEach(x=>$("src").add(new Option(x,x)));[...new Set(D.flatMap(j=>j.disciplines||[]))].sort().forEach(x=>$("dis").add(new Option(x,x)));render();})
  .catch(()=>$("sub").textContent="Could not load internships.json");
-$("q").oninput=render;$("src").onchange=render;
+$("q").oninput=render;$("src").onchange=render;$("dis").onchange=render;
 </script></body></html>
